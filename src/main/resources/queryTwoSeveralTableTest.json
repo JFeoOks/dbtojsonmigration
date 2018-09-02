@@ -1,0 +1,12 @@
+{
+  "table": "accounts",
+  "children": [
+    {
+      "table": "contacts",
+      "link":  {
+        "column": "account_id",
+        "with": "id"
+      }
+    }
+  ]
+}
