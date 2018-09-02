@@ -1,0 +1,4 @@
+{
+  "table": "accounts",
+  "columns": ["id", "name"]
+}
