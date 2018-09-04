@@ -12,5 +12,8 @@ public class TableConfiguration {
 
     private List<String> columns = new ArrayList<>();
     private List<TableConfiguration> children = new ArrayList<>();
+    /**
+     * Should be null on parent node
+     */
     private JoinLink link;
 }

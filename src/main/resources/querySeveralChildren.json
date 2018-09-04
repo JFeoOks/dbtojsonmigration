@@ -1,0 +1,19 @@
+{
+  "table": "accounts",
+  "children": [
+    {
+      "table": "contacts",
+      "link":  {
+        "column": "account_id",
+        "with": "id"
+      }
+    },
+    {
+      "table": "devices",
+      "link":  {
+        "column": "account_id",
+        "with": "id"
+      }
+    }
+  ]
+}

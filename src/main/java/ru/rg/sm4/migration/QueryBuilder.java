@@ -16,12 +16,18 @@ public class QueryBuilder {
 
     public List<String> createQueries(String resource) {
         TableConfiguration config = readConfiguration(resource);
-        String query = createTableQuery(config, null);
+        String masterTable = createTableQuery(config, null);
         String previousTable = config.getTable();
+        List<String> queries = processChildrenElements(config, previousTable);
+        queries.add(0, masterTable);
+        return queries;
+    }
+
+    private List<String> processChildrenElements(TableConfiguration config, String previousTable) {
         List<String> result = new ArrayList<>();
-        result.add(query);
         for (TableConfiguration child : config.getChildren()) {
             result.add(createTableQuery(child, previousTable));
+            result.addAll(processChildrenElements(child, config.getTable()));
         }
         return result;
     }
