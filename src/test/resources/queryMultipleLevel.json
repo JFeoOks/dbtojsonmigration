@@ -14,22 +14,8 @@
             "column": "child_pk_1",
             "with": "id"
           }
-        },
-        {
-          "table": "child_2",
-          "link": {
-            "column": "child_pk_2",
-            "with": "id"
-          }
         }
       ]
-    },
-    {
-      "table": "devices",
-      "link": {
-        "column": "account_id",
-        "with": "id"
-      }
     }
   ]
 }

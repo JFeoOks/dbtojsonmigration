@@ -16,45 +16,8 @@ public class QueryBuilder {
 
     public List<String> createQueries(String resource) {
         TableConfiguration config = readConfiguration(resource);
-        String masterTable = createTableQuery(config, null);
-        String previousTable = config.getTable();
-        List<String> queries = processChildrenElements(config, previousTable);
-        queries.add(0, masterTable);
-        return queries;
+        return createRootTableQuery(config);
     }
-
-    private List<String> processChildrenElements(TableConfiguration config, String previousTable) {
-        List<String> result = new ArrayList<>();
-        for (TableConfiguration child : config.getChildren()) {
-            result.add(createTableQuery(child, previousTable));
-            result.addAll(processChildrenElements(child, config.getTable()));
-        }
-        return result;
-    }
-
-    private String createTableQuery(TableConfiguration config, String parent) {
-        String currentAlias = createAlias(config.getTable());
-        SelectBuilder query = new SelectBuilder().from(applyAliasToTable(config.getTable(), currentAlias));
-        List<String> columns = config.getColumns();
-        columns.forEach(query::column);
-
-        JoinLink link = config.getLink();
-        if (link != null) {
-            String parentAlias = createAlias(parent);
-            query.from(applyAliasToTable(parent, parentAlias));
-            query.join(currentAlias + "." + link.getColumn() + "=" + parentAlias + "." + link.getWith());
-        }
-        return query.toString();
-    }
-
-    private String applyAliasToTable(String config, String currentAlias) {
-        return config + " " + currentAlias;
-    }
-
-    private String createAlias(String table) {
-        return table.substring(0, 1) + counter++;
-    }
-
 
     @SneakyThrows
     private TableConfiguration readConfiguration(String resource) {
@@ -65,5 +28,53 @@ public class QueryBuilder {
 
     private InputStream getCurrentResource(String resource) {
         return Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
+    }
+
+    private List<String> createRootTableQuery(TableConfiguration config) {
+        List<String> result = new ArrayList<>();
+        String currentAlias = createRootAlias(config.getTable());
+        SelectBuilder query = new SelectBuilder()
+                .from(applyAliasToTable(config.getTable(), currentAlias));
+//        config.getColumns().forEach(query::column);
+
+        result.add(query.toString());
+
+        result.addAll(createTableQuery(config, query.clone()));
+        return result;
+    }
+
+    private List<String> createTableQuery(TableConfiguration config, SelectBuilder query) {
+        List<String> result = new ArrayList<>();
+        String currentAlias = createAlias(config.getTable());
+        SelectBuilder tmpQuery = query.clone();
+
+        for (TableConfiguration child : config.getChildren()) {
+            if (child.getLink() == null) continue;
+
+            String childAlias = createRootAlias(child.getTable());
+//            child.getColumns().forEach(query::column);
+            query
+                    .from(applyAliasToTable(child.getTable(), childAlias))
+                    .join(childAlias + "." + child.getLink().getColumn() +
+                            "=" + currentAlias + "." + child.getLink().getWith());
+
+            result.add(query.toString());
+            result.addAll(createTableQuery(child, query.clone()));
+            query = tmpQuery;
+        }
+
+        return result;
+    }
+
+    private String createAlias(String table) {
+        return table.substring(0, 1) + counter++;
+    }
+
+    private String createRootAlias(String table) {
+        return table.substring(0, 1) + counter;
+    }
+
+    private String applyAliasToTable(String config, String currentAlias) {
+        return config + " " + currentAlias;
     }
 }

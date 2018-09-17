@@ -4,7 +4,10 @@ import ca.krasnay.sqlbuilder.SelectBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static java.util.Arrays.*;
+import java.util.Arrays;
+import java.util.List;
+
+import static java.util.Arrays.asList;
 
 public class QueryBuilderTest {
 
@@ -14,8 +17,8 @@ public class QueryBuilderTest {
     @Test
     public void testQueryOneTable() {
         Assertions.assertEquals(
-                new SelectBuilder().from(accounts +" a0").toString(),
-                new QueryBuilder().createQueries("queryOneTableTest.json").get(0)
+                new SelectBuilder().from(accounts + " a0").toString(),
+                new QueryBuilder().createQueries("resources/queryOneTableTest.json").get(0)
         );
     }
 
@@ -23,7 +26,7 @@ public class QueryBuilderTest {
     public void testQueryOneTableWithSpecifiedColumns() {
         Assertions.assertEquals(
                 new SelectBuilder().column("id").column("name").from(accounts + " a0").toString(),
-                new QueryBuilder().createQueries("queryOneTableWithSpecifiedColumnsTest.json").get(0)
+                new QueryBuilder().createQueries("resources/queryOneTableWithSpecifiedColumnsTest.json").get(0)
         );
     }
 
@@ -32,11 +35,11 @@ public class QueryBuilderTest {
         Assertions.assertIterableEquals(asList(
                 new SelectBuilder().from(accounts + " a0").toString(),
                 new SelectBuilder()
+                        .from(accounts + " a0")
                         .from("contacts c1")
-                        .from(accounts + " a2")
-                        .join("c1.account_id=a2.id").toString()
+                        .join("c1.account_id=a0.id").toString()
                 ),
-                new QueryBuilder().createQueries("queryTwoSeveralTableTest.json"));
+                new QueryBuilder().createQueries("resources/queryTwoSeveralTableTest.json"));
     }
 
     @Test
@@ -44,21 +47,43 @@ public class QueryBuilderTest {
         Assertions.assertIterableEquals(asList(
                 new SelectBuilder().from(accounts + " a0").toString(),
                 new SelectBuilder()
+                        .from(accounts + " a0")
                         .from("contacts c1")
-                        .from(accounts + " a2")
-                        .join("c1.account_id=a2.id").toString(),
+                        .join("c1.account_id=a0.id").toString(),
                 new SelectBuilder()
-                        .from("devices d3")
-                        .from(accounts + " a4")
-                        .join("d3.account_id=a4.id").toString()),
-                new QueryBuilder().createQueries("querySeveralChildren.json"));
+                        .from(accounts + " a0")
+                        .from("devices d2")
+                        .join("d2.account_id=a0.id").toString()),
+                new QueryBuilder().createQueries("resources/querySeveralChildren.json"));
 
     }
 
     @Test
     void takEtoNRabotaet() {
-        System.out.println(new QueryBuilder().createQueries("queryMultipleLevel.json")
-                .stream().map(Object::toString).reduce((s1, s2) -> s1 + '\n' + s2).get());
+        List<String> expected = Arrays.asList(
+                new SelectBuilder()
+                        .from("accounts a0")
+                        .toString(),
+                new SelectBuilder()
+                        .from("accounts a0")
+                        .from("contacts c1")
+                        .join("c1.account_id=a0.id")
+                        .toString(),
+                new SelectBuilder()
+                        .from("accounts a0")
+                        .from("contacts c1")
+                        .from("child_1 c2")
+                        .join("c1.account_id=a0.id")
+                        .join("c2.child_pk_1=c1.id")
+                        .toString()
+        );
+
+        List<String> actual = new QueryBuilder().createQueries("resources/queryMultipleLevel.json");
+
+        Assertions.assertIterableEquals(expected, actual);
+
+//        System.out.println(new QueryBuilder().createQueries("resources/queryMultipleLevel.json")
+//                .stream().map(Object::toString).reduce((s1, s2) -> s1 + '\n' + s2).get());
 
     }
 }
