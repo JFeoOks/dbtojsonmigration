@@ -10,67 +10,59 @@ import java.util.List;
 
 public class QueryBuilder {
 
-    private static ObjectMapper mapper = new ObjectMapper();
 
     private long counter = 0;
 
-    public List<String> createQueries(String resource) {
-        TableConfiguration config = readConfiguration(resource);
-        return createRootTableQuery(config);
+    private final TableConfiguration configuration;
+
+    public QueryBuilder(TableConfiguration configuration) {
+        this.configuration = configuration;
     }
 
-    @SneakyThrows
-    private TableConfiguration readConfiguration(String resource) {
-        return mapper.readValue(getCurrentResource(resource),
-                TableConfiguration.class
-        );
+
+    public List<String> createQueries() {
+        return covertHierarchyToQueries(configuration);
     }
 
-    private InputStream getCurrentResource(String resource) {
-        return Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
-    }
 
-    private List<String> createRootTableQuery(TableConfiguration config) {
+    private List<String> covertHierarchyToQueries(TableConfiguration config) {
         List<String> result = new ArrayList<>();
-        String currentAlias = createRootAlias(config.getTable());
+        String currentAlias = getTableAlias(config.getTable());
         SelectBuilder query = new SelectBuilder()
                 .from(applyAliasToTable(config.getTable(), currentAlias));
-//        config.getColumns().forEach(query::column);
-
+        SelectBuilder clonedQuery = query.clone();
+        config.getColumns().forEach(column -> query.column(currentAlias  + "." + column));
         result.add(query.toString());
-
-        result.addAll(createTableQuery(config, query.clone()));
+        result.addAll(processHierarchy(config, clonedQuery));
         return result;
     }
 
-    private List<String> createTableQuery(TableConfiguration config, SelectBuilder query) {
+    private List<String> processHierarchy(TableConfiguration config, SelectBuilder query) {
         List<String> result = new ArrayList<>();
-        String currentAlias = createAlias(config.getTable());
-        SelectBuilder tmpQuery = query.clone();
+        String currentAlias = getNextTableAlias(config.getTable());
 
         for (TableConfiguration child : config.getChildren()) {
             if (child.getLink() == null) continue;
 
-            String childAlias = createRootAlias(child.getTable());
-//            child.getColumns().forEach(query::column);
-            query
+            String childAlias = getTableAlias(child.getTable());
+            SelectBuilder tmpQuery = query.clone();
+            tmpQuery
                     .from(applyAliasToTable(child.getTable(), childAlias))
                     .join(childAlias + "." + child.getLink().getColumn() +
                             "=" + currentAlias + "." + child.getLink().getWith());
-
-            result.add(query.toString());
-            result.addAll(createTableQuery(child, query.clone()));
-            query = tmpQuery;
+            child.getColumns().forEach(tmpQuery::column);
+            result.add(tmpQuery.toString());
+            result.addAll(processHierarchy(child,tmpQuery /*query.clone()*/));
         }
 
         return result;
     }
 
-    private String createAlias(String table) {
+    private String getNextTableAlias(String table) {
         return table.substring(0, 1) + counter++;
     }
 
-    private String createRootAlias(String table) {
+    private String getTableAlias(String table) {
         return table.substring(0, 1) + counter;
     }
 

@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Arrays.asList;
+import static ru.rg.sm4.migration.ConfiguratonLoader.loadConfiguration;
 
 public class QueryBuilderTest {
 
@@ -18,15 +19,16 @@ public class QueryBuilderTest {
     public void testQueryOneTable() {
         Assertions.assertEquals(
                 new SelectBuilder().from(accounts + " a0").toString(),
-                new QueryBuilder().createQueries("resources/queryOneTableTest.json").get(0)
+                new QueryBuilder(loadConfiguration("queryOneTableTest.json")).createQueries().get(0)
         );
     }
 
     @Test
     public void testQueryOneTableWithSpecifiedColumns() {
+        String alias = "a0";
         Assertions.assertEquals(
-                new SelectBuilder().column("id").column("name").from(accounts + " a0").toString(),
-                new QueryBuilder().createQueries("resources/queryOneTableWithSpecifiedColumnsTest.json").get(0)
+                new SelectBuilder().column(alias +".id").column(alias +".name").from(accounts + " " + alias).toString(),
+                new QueryBuilder(loadConfiguration("queryOneTableWithSpecifiedColumnsTest.json")).createQueries().get(0)
         );
     }
 
@@ -39,7 +41,7 @@ public class QueryBuilderTest {
                         .from("contacts c1")
                         .join("c1.account_id=a0.id").toString()
                 ),
-                new QueryBuilder().createQueries("resources/queryTwoSeveralTableTest.json"));
+                new QueryBuilder(loadConfiguration("queryTwoSeveralTableTest.json")).createQueries());
     }
 
     @Test
@@ -54,12 +56,12 @@ public class QueryBuilderTest {
                         .from(accounts + " a0")
                         .from("devices d2")
                         .join("d2.account_id=a0.id").toString()),
-                new QueryBuilder().createQueries("resources/querySeveralChildren.json"));
+                new QueryBuilder(loadConfiguration("querySeveralChildren.json")).createQueries());
 
     }
 
     @Test
-    void takEtoNRabotaet() {
+    void testTableHierarchyProcessing() {
         List<String> expected = Arrays.asList(
                 new SelectBuilder()
                         .from("accounts a0")
@@ -78,13 +80,8 @@ public class QueryBuilderTest {
                         .toString()
         );
 
-        List<String> actual = new QueryBuilder().createQueries("resources/queryMultipleLevel.json");
-
+        List<String> actual = new QueryBuilder(loadConfiguration("queryMultipleLevel.json")).createQueries();
         Assertions.assertIterableEquals(expected, actual);
-
-//        System.out.println(new QueryBuilder().createQueries("resources/queryMultipleLevel.json")
-//                .stream().map(Object::toString).reduce((s1, s2) -> s1 + '\n' + s2).get());
-
     }
 }
 
